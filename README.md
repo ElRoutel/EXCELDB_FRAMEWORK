@@ -1,104 +1,188 @@
-# 📊 VBA Excel Framework — CRUD Reutilizable
+# VBA Excel Framework — CRUD Reutilizable
 
-Framework personal para proyectos de Excel con VBA. Permite crear
-sistemas de registro, búsqueda y eliminación de datos usando
-formularios, con una arquitectura modular que evita repetir código
-entre proyectos.
+Framework personal para crear proyectos de Excel con VBA de forma modular y reutilizable.  
+Permite trabajar con formularios, búsqueda, inserción, actualización y eliminación de registros sin repetir lógica en cada proyecto.
 
 ---
 
-## 🗂️ Estructura
-📁 framework/
-├── cEntrada.cls → Clase principal: Buscar, Insertar, Eliminar, Actualizar, Listar
-├── modUtils.bas → Utilidades: validaciones, limpiar forms, generar IDs
-📁 proyecto-ejemplo/
-├── modMain.bas → Punto de entrada del proyecto
-├── proyecto.xlsm → Excel con hojas y formularios
-└── README.md
+## ¿Qué incluye?
 
-text
+- **`cEntrada.cls`**: clase principal para manejar registros en una hoja de Excel.
+- **`modUtils.bas`**: funciones de apoyo como validación y limpieza de formularios.
+- **`modMain.bas`**: punto de entrada del proyecto.
+- **UserForms**: interfaz visual para registrar y buscar datos.
 
 ---
 
-## ⚡ Uso rápido
+## Estructura del proyecto
 
-### 1. Importar el framework
-En el editor VBA (Alt+F11) → `File → Import File` → importa
-`cEntrada.cls` y `modUtils.bas`
+```text
+R_FRAMEWORK/
+├── README.md
+├── cEntrada.cls
+├── modMain.bas
+├── modUtils.bas
+├── RT_FRAMEWORK.xlsm
+└── EXCELDB_FRAMEWORK/
+```
 
-### 2. Configurar modMain.bas
+---
+
+## Requisitos
+
+- Microsoft Excel con soporte para macros.
+- Guardar el archivo como **`.xlsm`**.
+- Tener habilitada la pestaña **Desarrollador**.
+
+---
+
+## Cómo funciona
+
+El flujo general es:
+
+1. El usuario presiona un botón en la hoja.
+2. Se ejecuta `AbrirMenu`.
+3. Se inicializa el objeto `entrada`.
+4. Se abre el formulario principal.
+5. Desde los formularios se puede registrar o buscar información.
+
+---
+
+## Inicialización
+
+En `modMain.bas`:
+
 ```vba
 Public entrada As New cEntrada
 
 Sub AbrirMenu()
-    entrada.Init "NombreHoja", 2, 1
+    entrada.Init "Alumnos", 2, 1
     frmMenu.Show
 End Sub
 ```
 
-### 3. Parámetros de Init
+### Parámetros de `Init`
+
 ```vba
-entrada.Init "Alumnos",  2,  1
-'             ↑           ↑   ↑
-'         Nombre hoja   Fila  Columna
-'                       inicio  del ID
+entrada.Init "Alumnos", 2, 1
 ```
 
+- **"Alumnos"**: nombre exacto de la hoja donde se guardan los datos.
+- **`2`**: fila donde empiezan los registros.
+- **`1`**: columna donde está el ID o campo principal de búsqueda.
+
 ---
 
-## 🧱 Métodos disponibles — cEntrada
+## Hoja de datos
 
-| Método | Descripción | Retorna |
+La hoja debe tener una estructura similar a esta:
+
+| A | B | C |
 |---|---|---|
-| `Init(hoja, fila, col)` | Inicializa el objeto | — |
-| `Buscar(valor)` | Busca por ID | `Long` (fila) o `-1` |
-| `Insertar(a, b, c...)` | Agrega fila nueva | — |
-| `Eliminar(id)` | Elimina fila por ID | `Boolean` |
-| `Actualizar(id, col, val)` | Modifica una celda | `Boolean` |
-| `Listar(col)` | Devuelve columna completa | `Variant()` |
+| ID | Nombre | Grado |
+
+La primera fila se usa como encabezado y los datos comienzan desde la fila 2.
 
 ---
 
-## 🛠️ Utilidades — modUtils
+## Uso básico
 
-| Función | Descripción |
-|---|---|
-| `Requerido(valor, campo)` | Valida que no esté vacío |
-| `LimpiarForm(Me)` | Limpia todos los TextBox/ComboBox |
-| `GenerarID(prefijo)` | ID único por timestamp |
-| `Confirmar(mensaje)` | Cuadro Sí/No, retorna Boolean |
-| `ResaltarFila(hoja, fila, color)` | Colorea una fila |
-
----
-
-## 📋 Ejemplo real — Sistema de Alumnos
+### Registrar un alumno
 
 ```vba
-' Registrar
 entrada.Insertar txtID.Value, txtNombre.Value, txtGrado.Value
+```
 
-' Buscar
+### Buscar un alumno
+
+```vba
 Dim fila As Long
 fila = entrada.Buscar(txtID.Value)
+```
 
-' Eliminar
-entrada.Eliminar(txtID.Value)
+### Eliminar un alumno
 
-' Actualizar columna 3
+```vba
+entrada.Eliminar txtID.Value
+```
+
+### Actualizar un registro
+
+```vba
 entrada.Actualizar "ID001", 3, "Nuevo valor"
 ```
 
 ---
 
-## 📌 Notas importantes
-- Guardar siempre como `.xlsm` (habilitado para macros)
-- Siempre llamar `AbrirMenu()` desde el botón de la hoja,
-  nunca abrir los forms directamente (causa error 91)
-- El nombre de la hoja en `Init` debe ser exacto (mayúsculas incluidas)
+## Ejemplo del formulario de registro
+
+```vba
+Private Sub btnGuardar_Click()
+    If Not modUtils.Requerido(txtID.Value, "ID") Then Exit Sub
+    If Not modUtils.Requerido(txtNombre.Value, "Nombre") Then Exit Sub
+
+    entrada.Insertar txtID.Value, txtNombre.Value, txtGrado.Value
+    MsgBox "Alumno registrado: " & txtNombre.Value
+
+    modUtils.LimpiarForm Me
+End Sub
+```
 
 ---
 
-## 🧠 Analogía
-> `cEntrada` es equivalente a un modelo/DAO en Node.js.
-> `modUtils` es equivalente a un archivo de helpers/utils.
-> `modMain` es el controlador del proyecto.
+## Ejemplo del formulario de búsqueda
+
+```vba
+Private Sub btnBuscar_Click()
+    Dim fila As Long
+    fila = entrada.Buscar(txtID.Value)
+
+    If fila > 0 Then
+        With ThisWorkbook.Sheets("Alumnos")
+            lblNombre.Caption = "Nombre: " & .Cells(fila, 2).Value
+            lblGrado.Caption = "Grado: " & .Cells(fila, 3).Value
+        End With
+    Else
+        MsgBox "Alumno no encontrado"
+    End If
+End Sub
+```
+
+---
+
+## Importar el framework a otro proyecto
+
+1. Abre el editor de VBA con `Alt + F11`.
+2. Ve a **Archivo → Importar archivo**.
+3. Importa:
+   - `cEntrada.cls`
+   - `modUtils.bas`
+4. Crea tu propio `modMain.bas` para ese proyecto.
+5. Ajusta el nombre de la hoja y la fila/columna en `Init`.
+
+---
+
+## Notas importantes
+
+- Si abres un formulario directamente sin pasar por `AbrirMenu`, puede aparecer el error de objeto no establecido.
+- Asegúrate de que el nombre del form coincida exactamente con el código.
+- Si el nombre de la hoja está mal escrito, `Init` fallará.
+- Guarda siempre el archivo como **`.xlsm`**.
+
+---
+
+## Objetivo
+
+La idea de este framework es evitar repetir lógica en cada proyecto y construir sistemas pequeños pero escalables usando Excel y VBA.
+
+---
+
+## Autor
+
+Creado como base personal de trabajo para proyectos escolares y de práctica.
+
+---
+
+## Licencia
+
+Uso personal y educativo.
